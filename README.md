@@ -6,7 +6,7 @@ Trace is a tool for writing programs which read, write and reason about programs
 *   A general-purpose non-black-box representation of objectives/constraints for optimization
 *   A general-purpose non-black-box representation of world models for AI more broadly
 
-Disclaimer for all of these: Trace is brand-new, and it was built with a focus on the core ideas rather than the engineering. Syntax is liable to change as we figure out what does and does not work well. Do not expect it to be easy/pleasant to use at this point, but do expect it to provide novel ways to think about programs.
+Disclaimer for all of these: Trace is brand-new, and it was built with a focus on the core ideas rather than the engineering. Syntax is liable to change as we figure out what does and does not work well. Do not expect it to be easy/pleasant to use at this point, but do expect it to provide novel ways to think about programs. Feedback of all forms is very appreciated!
 
 One more warning: this doc is intended to be read start-to-finish. Trace does not really resemble any other tool I know of, and you will likely be confused if you just dive in.
 
