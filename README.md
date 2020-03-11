@@ -58,7 +58,7 @@ The main trick to a compressed, lazy representation is an operator which says �
 
 Here the “?”s represent lazily-evaluated values which haven’t been evaluated yet. Note that the “copy” is nested within the outermost box - indicating that it, too, will be copied, leading to a whole nested ladder of blocks.
 
-In Trace syntax, the dotted boxes are Context objects, and the copy-with-changes operator is represented by function-call notation: `cont({‘n’:2})` makes a copy of the Context cont, in which ‘n’ is assigned the value 2. Values of variable-instances downstream of n will update in response to the new value of n, within the copy.
+In Trace syntax, the dotted boxes are Context objects, and the copy-with-changes operator is represented by function-call notation: `cont({"n":2})` makes a copy of the Context cont, in which "n" is assigned the value 2. Values of variable-instances downstream of n will update in response to the new value of n, within the copy.
 
 Core Data Structure
 -------------------
@@ -67,42 +67,42 @@ Here’s a full program in Trace; we’re going to walk through all the pieces.
 ```python
 from tracelang import S, E, Context
 factorial = Context({
-    'fact': Context({
-        'result': S(S('n') == 0, {
+    "fact": Context({
+        "result": S(S("n") == 0, {
             True: 1,
-            False: S('n')*S('result', S('fact')({'n': S('n') - 1}))
+            False: S("n")*S("result", S("fact")({"n": S("n") - 1}))
         })
-    })({'fact': S('fact')}),
-    'result': S('result', S('fact')({'n': S('n')}))
+    })({"fact": S("fact")}),
+    "result": S("result", S("fact")({"n": S("n")}))
 })
 ```
 ```python
->>> S(‘result’, factorial({‘n’: 3})).get_value()
+>>> S("result", factorial({"n": 3})).get_value()
 6
 ```
 Let’s start with the three main pieces: Symbols (S), Expressions (E), and Context. Very briefly:
 
-*   A Symbol is a variable-instance. It’s defined by a literal (e.g. ‘n’) and a context in which to resolve that literal (e.g. `{‘n’: 2}`). Calling get_value() on a symbol resolves the literal within its context.
+*   A Symbol is a variable-instance. It’s defined by a literal (e.g. "n") and a context in which to resolve that literal (e.g. `{"n": 2}`). Calling get_value() on a symbol resolves the literal within its context.
 *   Expressions are Symbols whose “context” is a python function, so we resolve them by calling the function. They are implicitly created by using operators like +, *, ==, or function call on Symbols.
 *   Contexts are basically dicts with a couple extra features: they provide a default context for any symbols within them, and we can “create a copy but with changes” via function-call notation.
 
 More details follow...
 
-Symbols are the starting point. A symbol is just a literal (e.g. ‘foo’ or 2) and a context mapping the literal to some value (e.g. `{‘foo’: ‘bar’}`; it doesn’t have to be a capital-C Context). By calling `.get_value()` on a symbol, we get the value of the literal from the context:
+Symbols are the starting point. A symbol is just a literal (e.g. "foo" or 2) and a context mapping the literal to some value (e.g. `{"foo": "bar"}`; it doesn’t have to be a capital-C Context). By calling `.get_value()` on a symbol, we get the value of the literal from the context:
 ```python
->>> S(‘foo’, {‘foo’: ‘bar’, ‘baz’: 2}).get_value()
-‘bar’
+>>> S("foo", {"foo": "bar", "baz": 2}).get_value()
+"bar"
 ```
 Both the literal and the context can themselves be symbols, in which case we resolve values recursively. For instance:
 ```python
->>> S(S(‘is_case’, {‘is_case’: True}), {True: ‘it is’, False: ‘it is not’}).get_value()
-‘it is’
->>> S(‘foo’, S(‘bar’, {‘bar’: {‘foo’: 2}})).get_value()
+>>> S(S("is_case", {"is_case": True}), {True: "it is", False: "it is not"}).get_value()
+"it is"
+>>> S("foo", S("bar", {"bar": {"foo": 2}})).get_value()
 2
 ```
-Conceptually, `S(‘x’, context)` works like the square-bracket accessor `context[‘x’]` - except that we recursively resolve symbols along the way.
+Conceptually, `S("x", context)` works like the square-bracket accessor `context["x"]` - except that we recursively resolve symbols along the way.
 
-In our factorial program, notice that many of the symbols don’t have any explicit context - e.g. `S(‘n’)` or `S(‘fact’)`. **When a symbol’s context is not explicitly passed, the context is set to the (lexically) enclosing Context** \- this is one of the two main uses of capital-C Contexts. For instance, the `S(‘n’)`’s in our example all have their context set to one of the two Contexts, depending on which one they appear inside.
+In our factorial program, notice that many of the symbols don't have any explicit context - e.g. `S("n")` or `S("fact")`. **When a symbol’s context is not explicitly passed, the context is set to the (lexically) enclosing Context** \- this is one of the two main uses of capital-C Contexts. For instance, the `S("n")`'s in our example all have their context set to one of the two Contexts, depending on which one they appear inside.
 
 Expressions are a special type of Symbol which resolve by calling a python function. If we have a function
 ```python
@@ -111,18 +111,18 @@ def square(x):
 ```
 then we could call it via
 ```python
->>> E(square, S(‘x’, {‘x’: 2})).get_value()
+>>> E(square, S("x", {"x": 2})).get_value()
 4
 ```
 This resolves all the input Symbols, then calls the python function, as you’d expect. In practice, we don’t usually need to write E() explicitly - **an E will be created automatically via operator overloading on Symbols**:
 ```python
->>> total = S(‘x’, {‘x’:2}) + S(‘y’, {‘y’:3})
+>>> total = S("x", {"x":2}) + S("y", {"y":3})
 >>> type(total)
 E
 >>> total.get_value()
 5
 ```
-In our factorial program, E’s are implicitly created where we multiply symbols (i.e. `S(‘n’)*S(‘res’, …)`), subtract symbols (i.e. `S(‘n’) - 1`), compare symbols (i.e. `S(‘n’) == 0`), and where we call symbols (i.e. `S(‘fact’)({'n': S('n')})`).
+In our factorial program, E’s are implicitly created where we multiply symbols (i.e. `S("n")*S("res", …)`), subtract symbols (i.e. `S("n") - 1`), compare symbols (i.e. `S("n") == 0`), and where we call symbols (i.e. `S("fact")({"n": S("n")})`).
 
 So if they're implicit, why do we need to know all this? Remember, the point of Trace is not merely to "run the code" (i.e. call `.get_value()`), but to query the structure of the computation - and E's are one of the main things which comprise that data structure. We'll see a bit of that in the next section.
 
@@ -133,43 +133,43 @@ Contexts are, conceptually, mostly just dicts. They map things to other things. 
 
 In the example program, we create a modified copy in three places:
 
-*   `S('fact')({'n': S('n') - 1})` creates a copy of the context called ‘fact’ for the recursive call, just like the diagram from the previous section.
-*   `Context({...})({'fact': S('fact')})` is used to pass a pointer to the fact-context inside of the fact-context itself, so copies can be made.
-*   `S('fact')({'n': S('n')})` is just a pass-through function call.
+*   `S("fact")({"n": S("n") - 1})` creates a copy of the context called "fact" for the recursive call, just like the diagram from the previous section.
+*   `Context({...})({"fact": S("fact")})` is used to pass a pointer to the fact-context inside of the fact-context itself, so copies can be made.
+*   `S("fact")({"n": S("n")})` is just a pass-through function call.
 
-When actually using the factorial function, we create one more modified copy: `factorial({‘n’: 3})`. This is the first copy with a value actually assigned to ‘n’.
+When actually using the factorial function, we create one more modified copy: `factorial({"n": 3})`. This is the first copy with a value actually assigned to "n".
 
 Before we jump back in to our factorial example, let’s see how these pieces play together in a simpler example:
 ```python
 import operator as op
 half_adder = Context({
-    ‘a’: 0,
-    ‘b’: 1,
-    ‘sum’: E(op.xor, [S(‘a’), S(‘b’)]),
-    ‘carry’: E(op.and_, [S(‘a’), S(‘b’)])
+    "a": 0,
+    "b": 1,
+    "sum": E(op.xor, [S("a"), S("b")]),
+    "carry": E(op.and_, [S("a"), S("b")])
 })
 ```
-This example contains two Symbols (other than the E’s). Neither Symbol has an explicit context passed, so both have their context set to the enclosing Context - i.e. the object half\_adder. To get value of ‘sum’ within half\_adder, we’d call `S(‘sum’, half_adder).get_value()`. This would look up the values of `S(‘a’, half_adder)` and `S(‘b’, half_adder)`, then pass those values to the python function `op.xor`. We could also evaluate at other inputs by making a modified copy - e.g. `half_adder({‘a’: 1, ‘b’: 0})`.
+This example contains two Symbols (other than the E’s). Neither Symbol has an explicit context passed, so both have their context set to the enclosing Context - i.e. the object half\_adder. To get value of "sum" within half\_adder, we’d call `S("sum", half_adder).get_value()`. This would look up the values of `S("a", half_adder)` and `S("b", half_adder)`, then pass those values to the python function `op.xor`. We could also evaluate at other inputs by making a modified copy - e.g. `half_adder({"a": 1, "b": 0})`.
 
 That’s all the core pieces. Let’s take another look at our example program:
 ```python
 from tracelang import S, E, Context
 factorial = Context({
-    'fact': Context({
-        'result': S(S('n') == 0, {
+    "fact": Context({
+        "result": S(S("n") == 0, {
             True: 1,
-            False: S('n')*S('result', S('fact')({'n': S('n') - 1}))
+            False: S("n")*S("result", S("fact")({"n": S("n") - 1}))
         })
-    })({'fact': S('fact')}),
-    'result': S('result', S('fact')({'n': S('n')}))
+    })({"fact": S("fact")}),
+    "result": S("result", S("fact")({"n": S("n")}))
 })
 ```
 ```python
->>\> S(‘result’, factorial({‘n’: 3})).get_value()
+>>> S("result", factorial({"n": 3})).get_value()
 6
 ```
 
-We have two Contexts. The inner Context is our main function, but we need to use the outer Context in order to get a pointer to the inner context, so that we can make modified copies of it. There’s some code patterns which are probably unfamiliar at this point - e.g. `S(S(‘n’) == 0, …)` is used to emulate an if-statement, and we write things like `S(‘result’, fact)` rather than `fact[‘result’]`. But overall, hopefully the underlying structure of this code looks familiar.
+We have two Contexts. The inner Context is our main function, but we need to use the outer Context in order to get a pointer to the inner context, so that we can make modified copies of it. There’s some code patterns which are probably unfamiliar at this point - e.g. `S(S("n") == 0, …)` is used to emulate an if-statement, and we write things like `S("result", fact)` rather than `fact["result"]`. But overall, hopefully the underlying structure of this code looks familiar.
 
 But if all we wanted to do was write and run code, we wouldn’t be using Trace in the first place. Let’s probe our program a bit.
 
@@ -180,7 +180,7 @@ Human programmers sometimes “step through the code”, following the execution
 
 Here’s how we step through some Trace code.
 
-We start with our final output, e.g. `answer = S(‘result’, factorial({‘n’: 3}))`. Before, we called `answer.get_value()` on this object, but now we won’t. Instead, we’ll access the pieces which went into that Symbol: `answer._literal`, and `answer._context`. In general, we can “work backwards” in three possible “directions”:
+We start with our final output, e.g. `answer = S("result", factorial({"n": 3}))`. Before, we called `answer.get_value()` on this object, but now we won’t. Instead, we’ll access the pieces which went into that Symbol: `answer._literal`, and `answer._context`. In general, we can “work backwards” in three possible “directions”:
 
 *   If `answer._literal` is a Symbol/Expression, then we can step back through it, and/or we can get its value
 *   If `answer._context` is a Symbol/Expression, then we can step back through it, and/or we can get its value
@@ -190,7 +190,7 @@ In this case, the literal is not a Symbol, but the context is - it’s an Expres
 
 Let’s go one step further in: we’ll set `last_step = answer._context.get_value()\[answer._literal]`, and look at `last_step`.
 
-Now we get an object which looks like `S('result', S('fact', <modified copy>)({'n': S('n', <modified copy>)}))`, where the modified copy is the copy of factorial with `{n: 3}` applied. The outermost symbol once again has a string as literal, and its context is an Expression object performing the modified-copy operation on a Context. Calling `.get_value()` on the Expression `last_step._context` would lead us even further in.
+Now we get an object which looks like `S("result", S("fact", <modified copy>)({"n": S("n", <modified copy>)}))`, where the modified copy is the copy of factorial with `{n: 3}` applied. The outermost symbol once again has a string as literal, and its context is an Expression object performing the modified-copy operation on a Context. Calling `.get_value()` on the Expression `last_step._context` would lead us even further in.
 
 Now, obviously this is not a very convenient way for a _human_ to trace through a program’s execution. But if we want to write _programs_ which trace through other programs’ execution, then this looks more reasonable - there’s a relatively small number of possibilities to check at every step, a relatively small number of object types to handle, and we have a data structure which lets us walk through the entire program trace.
 
