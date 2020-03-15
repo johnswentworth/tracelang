@@ -206,3 +206,8 @@ To wrap it up, here are some endorsements from enthusiastic Trace users.
 “Trace combines the syntax of JSON with the semantics of a spreadsheet, but instead of just ending up horrendously hackish, it ends up horrendously abstract _and_ horrendously hackish.” - John Von Neumann
 
 “In Trace, source code is truly just data, always.” - Alan Turing
+
+Installation
+------------
+
+Run `python3 setup install` to use or `python3 setup develop ` if you want to modify the package.

@@ -1,5 +1,5 @@
-from lib.sym import S, E
-from lib.context import Context
+from tracelang.sym import S, E
+from tracelang.context import Context
 
 import sys
 import operator as op
