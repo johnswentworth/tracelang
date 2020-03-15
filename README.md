@@ -210,4 +210,4 @@ To wrap it up, here are some endorsements from enthusiastic Trace users.
 Installation
 ------------
 
-Run `python3 setup install` to use or `python3 setup develop ` if you want to modify the package.
+Run `python3 setup install` to use or `python3 setup develop` if you want to modify the package.
