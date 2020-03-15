@@ -12,6 +12,7 @@ class TreeWalk:
         return expr
 
 class TypedTreeWalk(TreeWalk):
+    # Walk a nested data structure, with operation at each node determined by its type
     def __init__(self, rules):
         def get_type_checker(t):
             return lambda obj: isinstance(obj, t)
@@ -37,6 +38,7 @@ pack = {
 
 def get_bind_collection(tp):
     def bind_collection(coll, walk, data):
+        '''Walk all elements of collection; mainly used for rebinding symbols within collections'''
         d = unpack[tp](coll)
         result = {k: walk(d[k], data) for k in d}
         return pack[tp](result)

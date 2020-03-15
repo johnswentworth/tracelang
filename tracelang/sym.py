@@ -127,16 +127,19 @@ class S(BaseSymbol):
     
     @staticmethod
     def as_sym(literal, context):
-        # Used by subclasses with different call patterns, to construct as though they were S
+        '''(Internal) Used by subclasses with different call patterns, to construct as though they were S'''
         # TODO: get rid of this and just standardize constructors instead?
         return S(literal, context)
     
     def get_value(self):
+        '''Recursively resolve value of _literal within _context, with cache.
+        Also used by subclasses of S, which typically override resolve()'''
         if self._value is uncomputed:
             self._value = self.resolve()
         return self._value
     
     def resolve(self):
+        '''Recursively resolve value of _literal within _context, without cache'''
         expr = maybe_resolve(self._context)[maybe_resolve(self._literal)]
         return maybe_resolve(expr)
     
@@ -152,17 +155,21 @@ class E(S):
     
     @staticmethod
     def as_sym(literal, context):
+        '''(Internal) Alternative constructor, which mirrors the typical S() construction'''
         return E(context, literal)
     
     def resolve(self):
+        '''Resolve all symbols in args, then apply f'''
         args = [maybe_resolve(a) for a in maybe_resolve(self._literal)]
         return self._context(*args)
     
     def unpack(self):
+        '''(Internal) Representation as a dict; used by TreeWalk'''
         return {'context': self._context, 'literal': self._literal}
     
     @staticmethod
     def pack(context, literal):
+        '''(Internal) Inverse of unpack'''
         return E(context, literal)
 
     def __repr__(self):
@@ -175,15 +182,16 @@ def arg_list(*args):
     return args
 
 class GreedyList(E):
-    # This is a non-lazy list type, It has two main use-cases:
-    # - output lists, where you don't want a list of unresolved symbols
-    # - inputs for python functions which operate on lists (e.g. map() of a python func)
     def __init__(self, l):
+        '''This is a non-lazy list type, it has two main use-cases:
+        - output lists, where you don't want a list of unresolved symbols
+        - inputs for python functions which operate on lists (e.g. map() of a python func)'''
         self._literal = l
         self._context = arg_list
         self._value = uncomputed
     
     def resolve(self):
+        '''Recursively resolve all symbols in the list'''
         return [maybe_resolve(item) for item in maybe_resolve(self._literal)]
     
     def __getitem__(self, ind):
@@ -197,11 +205,14 @@ class GreedyList(E):
 
 class LazyList(E):
     def __init__(self, l):
+        '''This is a lazy list type; along with Context, it should be the go-to
+        data structure within Trace program specifications'''
         self._literal = l
         self._context = arg_list  # Not *quite* accurate...
         self._value = uncomputed
     
     def resolve(self):
+        '''Return a list which recursively resolves symbols on read'''
         return LazyListValue(maybe_resolve(self._literal))
     
     def __getitem__(self, ind):
@@ -227,16 +238,3 @@ class LazyListValue(list):
         for k, v in intervention.items():
             new_l[k] = v
         return LazyListValue(new_l)
-
-def kwarg_dict(**kwargs):
-    return kwargs
-
-class Dict(E):
-    # NOTE: this one doesn't work yet
-    def __init__(self, d):
-        self._literal = kwarg_dict
-        self._context = d  # TODO: make E handle kwargs
-        self._value = uncomputed
-    
-    def resolve(self):
-        return {k: maybe_resolve(v) for k, v in self._context.items()}

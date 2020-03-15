@@ -41,10 +41,11 @@ class ContextValue:
         return self.context[item]
     
     def get_copy(self):
-        # Any symbols with self as context are rebound to the new context
+        '''Any symbols with self as context are rebound to the new context'''
         return ContextValue(self.context, self)
     
     def __call__(self, intervention):
+        '''Copy this context, and update according to (dict) intervention'''
         new_context = self.get_copy()
         new_context.context.update(intervention)
         return new_context
